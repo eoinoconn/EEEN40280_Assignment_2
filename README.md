@@ -1,0 +1,2 @@
+# EEEN40280_Assignment_2
+Signal Measurements You are to design a measuring instrument, to make voltage and frequency measurements on signals. The instrument will be based on an ADuC841 microcontroller, using a modified evaluation board and a 4-digit or 8-digit display. You should work on this assignment as a team of two, working together on the design, but working separately on different parts of the implementation – you will have to do this to get the assignment finished in the time available.
