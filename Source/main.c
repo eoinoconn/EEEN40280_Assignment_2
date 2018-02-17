@@ -24,14 +24,28 @@ typedef unsigned short int uint16;	// 16-bit unsigned integer
 
 #define READ_PORT P1_1
 
+static uint8 count;
+static uint16 temp_data;
+static uint16 asamp;
+static uint16 average;
+static uint16 a;
+
+// timer interrupt
 void timer2 (void) interrupt 5 using 1
 {
 	TF2 = 0;
 }
 
-void ADC1 (void) interrupt 7 using 2
+// ADC interrupt
+void ADC1 (void) interrupt 6 using 2
 {
-	TF2 = 0;
+	TF2 = 0;																// Reset timer flag, not done by hardware
+	count++;																// Iterate the number of averages taken
+	temp_data = 0;													// 
+	temp_data = ADCDATAH;										// Store high byte
+	temp_data = temp_data & 15;							// extract the most significant bits 
+	asamp = ((temp_data << 8) + ADCDATAL);	// store sample value
+	average = ((asamp) + (0.9)*(average));	// TODO troubleshoot avarging errors
 }
 
 void delay (uint16 delayVal)
@@ -46,8 +60,9 @@ void delay (uint16 delayVal)
 
 void main (void)
 {
+	a = 1;
 	ADCCON1 = 0xFE;							// setup the ADC
-	IE = 224;									// enable only the ADC interrut
+	IE = 192;									// enable only the ADC interrut
 	//ET2 = 1;
 	T2CON = 0x4;								// setup timer 2
 	RCAP2L = 214;								// reload value of timer 2
