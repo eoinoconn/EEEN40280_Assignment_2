@@ -97,7 +97,6 @@ void main (void)
 	a = 1;
 	ADCCON1 = 0xFE;							// setup the ADC
 	IE = 192;									// enable only the ADC interrut
-	//ET2 = 1;
 	T2CON = 0x4;								// setup timer 2
 	RCAP2L = 214;								// reload value of timer 2
 	RCAP2H = 213;
