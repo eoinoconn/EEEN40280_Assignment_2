@@ -22,14 +22,11 @@
 typedef unsigned char uint8;				// 8-bit unsigned integer
 typedef unsigned short int uint16;	// 16-bit unsigned integer
 
-#define READ_PORT P1_1
 
-static uint8 count;
-static uint16 temp_data;
+#define LOAD T0
+
 static uint16 samp;
 static uint16 average;
-static uint16 a;
-
 static uint16 message;
 
 // timer interrupt
@@ -42,26 +39,27 @@ void timer2 (void) interrupt 5 using 1
 void ADC1 (void) interrupt 6 using 2
 {
 	TF2 = 0;																// Reset timer flag, not done by hardware
-	count++;																// Iterate the number of averages taken
-	temp_data = 0;													// 
-	temp_data = ADCDATAH;										// Store high byte
-	temp_data = temp_data & 15;							// extract the most significant bits 
-	samp = ((temp_data << 8) + ADCDATAL);	// store sample value
-	average = ((samp >> 2) * 3) + (average >> 2);	// TODO troubleshoot avarging errors
+	samp = ADCDATAH & 15;							// extract the most significant bits 
+	samp = ((samp << 8) + ADCDATAL);	// store sample value
+	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 }
 
 void delay (uint16 delayVal)
 {
-	uint16 i;                 // counting variable 
+	uint16 i, j;                 // counting variable 
 	for (i = 0; i < delayVal; i++)    // repeat  
     {
-		  // do nothing
+		  for(j=0; j < 100; j++)
+			{
+				// nothin
+			}
     }
 }	// end delay
 
 void send_message(uint8 addr, uint8 instr)
 {
-	uint8 dummy;										// used to delay between transfers
+	volatile uint8 dummy;										// used to delay between transfers
+	LOAD = 0;
 	
 	SPIDAT = addr & 0xF;						// load addr into shift register
 	while (!ISPI)										// wait for transfer to complete
@@ -80,11 +78,13 @@ void send_message(uint8 addr, uint8 instr)
 	ISPI = 0;												// clear SPI interrupt
 	dummy = 0x00;										// delay before writing next byte to shift reg
 	dummy = 0xFF;
+	LOAD = 1;
 }
 
 void disp_setup()
 {
-	SPICON = 0x34;
+	LOAD = 1;
+	SPICON = 0x33;
 	send_message(12,1);		// turn on display
 	send_message(11,3);		// set 4 rightmost digits active
 	send_message(10,4); 	// intensity equals number of active digits
@@ -94,7 +94,7 @@ void disp_setup()
 
 void main (void)
 {
-	a = 1;
+	uint8 x = 0; 
 	ADCCON1 = 0xFE;							// setup the ADC
 	IE = 192;										// enable only the ADC interrut
 	T2CON = 0x4;								// setup timer 2
@@ -103,25 +103,22 @@ void main (void)
 	disp_setup();								// Call display setup function
 	while (1)
 	{
-		uint8 x = 0;
-		send_message(1,x);
-		send_message(2,x);
-		send_message(3,x);
-		send_message(4,x);
-		x++;
-		delay(1000);
-		send_message(1,x);
-		send_message(2,x);
-		send_message(3,x);
-		send_message(4,x);
-		x++;
-		delay(1000);
-		send_message(1,x);
-		send_message(2,x);
-		send_message(3,x);
-		send_message(4,x);
-		x++;
-		delay(1000);
+		
+		send_message(1,x++);
+		send_message(2,x++);
+		send_message(3,x++);
+		send_message(4,x++);
+		delay(65535);
+		send_message(1,x++);
+		send_message(2,x++);
+		send_message(3,x++);
+		send_message(4,x++);
+		delay(65535);
+		send_message(1,x++);
+		send_message(2,x++);
+		send_message(3,x++);
+		send_message(4,x++);
+		delay(65535);
 	}
 	
 		
