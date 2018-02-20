@@ -38,16 +38,17 @@ void timer2 (void) interrupt 5 using 1
 // ADC interrupt
 void ADC1 (void) interrupt 6 using 2
 {
-	TF2 = 0;																// Reset timer flag, not done by hardware
-	samp = ADCDATAH & 0xF;							// extract the most significant bits 
-	samp = ((samp << 8) + ADCDATAL);	// store sample value
+	TF2 = 0;																			// Reset timer flag, not done by hardware
+	samp = ADCDATAH & 0xF;												// extract the most significant bits 
+	samp = ((samp << 8) + ADCDATAL);							// store sample value
 	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 }
 
+// do nothing for delayVal * 100 cycles
 void delay (uint16 delayVal)
 {
-	uint16 i, j;                 // counting variable 
-	for (i = 0; i < delayVal; i++)    // repeat  
+	uint16 i, j;
+	for (i = 0; i < delayVal; i++)
     {
 		  for(j=0; j < 100; j++)
 			{
@@ -56,29 +57,33 @@ void delay (uint16 delayVal)
     }
 }	// end delay
 
-void send_message(uint8 addr, uint8 instr)
+// write instruction to register address
+void send_message(uint8 instr, uint8 addr)
 {
-	volatile uint8 dummy;										// used to delay between transfers
-	LOAD = 0;
+	volatile uint8 dummy;	// used to delay between transfers
+	LOAD = 0;							// prepare display for new data
 	
-	SPIDAT = addr & 0xF;						// load addr into shift register
-	while (!ISPI)										// wait for transfer to complete
+	// send first byte
+	SPIDAT = addr;				// load addr into shift register
+	while (!ISPI)					// wait for transfer to complete
 	{
 		// do nothing
 	}
-	ISPI = 0;												// clear SPI interrupt
-	dummy = 0x00;										// delay before writing next byte to shift reg
+	ISPI = 0;							// clear SPI interrupt
+	dummy = 0x00;					// delay before writing next byte to shift reg
 	dummy = 0xFF;
 	
-	SPIDAT = instr;									// load instr into shift register
-	while (!ISPI)										// wait for transfer to complete
+	// send second byte
+	SPIDAT = instr;				// load instr into shift register
+	while (!ISPI)					// wait for transfer to complete
 	{
 		// do nothing
 	}
-	ISPI = 0;												// clear SPI interrupt
-	dummy = 0x00;										// delay before writing next byte to shift reg
+	ISPI = 0;							// clear SPI interrupt
+	dummy = 0x00;					// delay before writing next byte to shift reg
 	dummy = 0xFF;
-	LOAD = 1;
+	
+	LOAD = 1;							// make display accept new data
 }
 
 void disp_setup()
@@ -92,25 +97,32 @@ void disp_setup()
 	send_message(15,0); 	// disable test mode	
 }
 
+void disp_voltage(uint16 adc_val)
+{
+	uint16 mV = (adc_val >> 10) * 625;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
+	uint8 i, digit;
+	for (i = 1; i <= 4; i++)
+	{
+		digit = mV % 10;									// get value of current digit
+		if(i == 4) digit = digit | 0x80;	// include decimal pt for leftmost digit to convert to V
+		send_message(i,digit);						// update digit on display
+		mV /= 10;													// move to next digit
+	}
+}
+
 void main (void)
 {
-	uint8 x = 0; 
-	ADCCON1 = 0xFE;							// setup the ADC
+	ADCCON1 = 0xFE;		// setup the ADC
 	ADCCON2 = 0x01;
-	IE = 192;										// enable only the ADC interrut
-	T2CON = 0x4;								// setup timer 2
-	RCAP2L = 214;								// reload high byte of timer 2
-	RCAP2H = 213;								// reload high byte of timer 2
-	disp_setup();								// Call display setup function
+	IE = 192;					// enable only the ADC interrupt
+	T2CON = 0x4;			// setup timer 2
+	RCAP2L = 214;			// reload high byte of timer 2
+	RCAP2H = 213;			// reload high byte of timer 2
+	disp_setup();			// Call display setup function
 	while (1)
 	{
 		uint16 copy = average;
-		for(x = 0; x<4;x++){
-			uint16 temp = (copy & 0xF);
-			send_message(x+1,temp);
-			copy = copy >> 4;
-			delay(6553);
-		}
+		disp_voltage(copy);
 	}
 	
 		
