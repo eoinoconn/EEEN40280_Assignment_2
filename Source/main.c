@@ -46,8 +46,8 @@ void ADC1 (void) interrupt 6 using 2
 	temp_data = 0;													// 
 	temp_data = ADCDATAH;										// Store high byte
 	temp_data = temp_data & 15;							// extract the most significant bits 
-	asamp = ((temp_data << 8) + ADCDATAL);	// store sample value
-	average = ((asamp) + (0.9)*(average));	// TODO troubleshoot avarging errors
+	samp = ((temp_data << 8) + ADCDATAL);	// store sample value
+	average = ((samp << 2) * 3) + (average << 2);	// TODO troubleshoot avarging errors
 }
 
 void delay (uint16 delayVal)
