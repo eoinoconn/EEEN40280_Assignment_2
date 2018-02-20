@@ -39,7 +39,7 @@ void timer2 (void) interrupt 5 using 1
 void ADC1 (void) interrupt 6 using 2
 {
 	TF2 = 0;																// Reset timer flag, not done by hardware
-	samp = ADCDATAH & 15;							// extract the most significant bits 
+	samp = ADCDATAH & 0xF;							// extract the most significant bits 
 	samp = ((samp << 8) + ADCDATAL);	// store sample value
 	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 }
@@ -96,6 +96,7 @@ void main (void)
 {
 	uint8 x = 0; 
 	ADCCON1 = 0xFE;							// setup the ADC
+	ADCCON2 = 0x01;
 	IE = 192;										// enable only the ADC interrut
 	T2CON = 0x4;								// setup timer 2
 	RCAP2L = 214;								// reload high byte of timer 2
@@ -103,22 +104,13 @@ void main (void)
 	disp_setup();								// Call display setup function
 	while (1)
 	{
-		
-		send_message(1,x++);
-		send_message(2,x++);
-		send_message(3,x++);
-		send_message(4,x++);
-		delay(65535);
-		send_message(1,x++);
-		send_message(2,x++);
-		send_message(3,x++);
-		send_message(4,x++);
-		delay(65535);
-		send_message(1,x++);
-		send_message(2,x++);
-		send_message(3,x++);
-		send_message(4,x++);
-		delay(65535);
+		uint16 copy = average;
+		for(x = 0; x<4;x++){
+			uint16 temp = (copy & 0xF);
+			send_message(x+1,temp);
+			copy = copy >> 4;
+			delay(6553);
+		}
 	}
 	
 		
