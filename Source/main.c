@@ -30,6 +30,8 @@ static uint16 asamp;
 static uint16 average;
 static uint16 a;
 
+static uint16 message;
+
 // timer interrupt
 void timer2 (void) interrupt 5 using 1
 {
@@ -57,6 +59,38 @@ void delay (uint16 delayVal)
     }
 }	// end delay
 
+void send_message(uint8 addr, uint8 instr)
+{
+	uint8 dummy;										// used to delay between transfers
+	
+	SPIDAT = addr & 0xF;						// load addr into shift register
+	while (!ISPI)										// wait for transfer to complete
+	{
+		// do nothing
+	}
+	ISPI = 0;												// clear SPI interrupt
+	dummy = 0x00;										// delay before writing next byte to shift reg
+	dummy = 0xFF;
+	
+	SPIDAT = instr;									// load instr into shift register
+	while (!ISPI)										// wait for transfer to complete
+	{
+		// do nothing
+	}
+	ISPI = 0;												// clear SPI interrupt
+	dummy = 0x00;										// delay before writing next byte to shift reg
+	dummy = 0xFF;
+}
+
+void disp_setup()
+{
+	SPICON = 0x34;
+	send_message(12,1);		// turn on display
+	send_message(11,3);		// set 4 rightmost digits active
+	send_message(10,4); 	// intensity equals number of active digits
+	send_message(9,0xFF);	// put all digits in decode mode
+	send_message(15,0); 	// disable test mode	
+}
 
 void main (void)
 {
@@ -67,8 +101,27 @@ void main (void)
 	T2CON = 0x4;								// setup timer 2
 	RCAP2L = 214;								// reload value of timer 2
 	RCAP2H = 213;
+	disp_setup();
 	while (1)
 	{
+		uint8 x = 0;
+		send_message(1,x);
+		send_message(2,x);
+		send_message(3,x);
+		send_message(4,x);
+		x++;
+		delay(1000);
+		send_message(1,x);
+		send_message(2,x);
+		send_message(3,x);
+		send_message(4,x);
+		x++;
+		delay(1000);
+		send_message(1,x);
+		send_message(2,x);
+		send_message(3,x);
+		send_message(4,x);
+		x++;
 		delay(1000);
 	}
 	
