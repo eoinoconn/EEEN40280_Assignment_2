@@ -95,8 +95,7 @@ void disp_setup()
 void main (void)
 {
 	uint8 x = 0; 
-	ADCCON1 = 0xFE;							// setup the ADC
-	ADCCON2 = 0x01;
+	ADCCON1 = 142;							// setup the ADC
 	IE = 192;										// enable only the ADC interrut
 	T2CON = 0x4;								// setup timer 2
 	RCAP2L = 214;								// reload high byte of timer 2
