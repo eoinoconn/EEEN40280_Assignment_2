@@ -124,6 +124,7 @@ void main (void)
 	{
 		uint16 copy = average;
 		disp_voltage(copy);
+		delay(65535);
 	}
 	
 		
