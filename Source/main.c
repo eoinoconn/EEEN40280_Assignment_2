@@ -26,7 +26,7 @@ typedef unsigned short int uint16;	// 16-bit unsigned integer
 
 static uint8 count;
 static uint16 temp_data;
-static uint16 asamp;
+static uint16 samp;
 static uint16 average;
 static uint16 a;
 
@@ -47,7 +47,7 @@ void ADC1 (void) interrupt 6 using 2
 	temp_data = ADCDATAH;										// Store high byte
 	temp_data = temp_data & 15;							// extract the most significant bits 
 	samp = ((temp_data << 8) + ADCDATAL);	// store sample value
-	average = ((samp << 2) * 3) + (average << 2);	// TODO troubleshoot avarging errors
+	average = ((samp >> 2) * 3) + (average >> 2);	// TODO troubleshoot avarging errors
 }
 
 void delay (uint16 delayVal)
@@ -96,11 +96,11 @@ void main (void)
 {
 	a = 1;
 	ADCCON1 = 0xFE;							// setup the ADC
-	IE = 192;									// enable only the ADC interrut
+	IE = 192;										// enable only the ADC interrut
 	T2CON = 0x4;								// setup timer 2
-	RCAP2L = 214;								// reload value of timer 2
-	RCAP2H = 213;
-	disp_setup();
+	RCAP2L = 214;								// reload high byte of timer 2
+	RCAP2H = 213;								// reload high byte of timer 2
+	disp_setup();								// Call display setup function
 	while (1)
 	{
 		uint8 x = 0;
