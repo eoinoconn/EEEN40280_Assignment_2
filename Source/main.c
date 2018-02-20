@@ -119,6 +119,7 @@ void main (void)
 	RCAP2L = 214;			// reload high byte of timer 2
 	RCAP2H = 213;			// reload high byte of timer 2
 	disp_setup();			// Call display setup function
+
 	while (1)
 	{
 		uint16 copy = average;
