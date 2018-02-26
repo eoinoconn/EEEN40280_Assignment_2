@@ -28,6 +28,9 @@ typedef unsigned short int uint16;	// 16-bit unsigned integer
 static uint16 samp;
 static uint16 average;
 static uint16 message;
+static uint16 aboveorbelow;
+static uint16 count;
+static uint16 completed_periods;
 
 // timer interrupt
 void timer2 (void) interrupt 5 using 1
@@ -41,7 +44,22 @@ void ADC1 (void) interrupt 6 using 2
 	TF2 = 0;																			// Reset timer flag, not done by hardware
 	samp = ADCDATAH & 0xF;												// extract the most significant bits 
 	samp = ((samp << 8) + ADCDATAL);							// store sample value
-	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
+	if true
+	{
+		average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
+	}
+	else
+	{
+		if (((samp > 2048) and (aboveorbelow)) or ((samp < 2048) and ((not aboveorbelow)))
+		{
+			count++;
+		}
+		else
+		{
+			complete_periods = count;
+			count = 0;
+		}
+	}
 }
 
 // do nothing for delayVal * 100 cycles
@@ -110,21 +128,47 @@ void disp_voltage(uint16 adc_val)
 	}
 }
 
+void disp_voltage(uint16 adc_val)
+{
+	uint16 mV = (adc_val >> 10) * 625;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
+	uint8 i, digit;
+	for (i = 1; i <= 4; i++)
+	{
+		digit = mV % 10;									// get value of current digit
+		if(i == 4) digit = digit | 0x80;	// include decimal pt for leftmost digit to convert to V
+		send_message(i,digit);						// update digit on display
+		mV /= 10;													// move to next digit
+	}
+}
+
 void main (void)
 {
 	ADCCON1 = 0xFE;		// setup the ADC
 	ADCCON2 = 0x01;
 	IE = 192;					// enable only the ADC interrupt
 	T2CON = 0x4;			// setup timer 2
-	RCAP2L = 214;			// reload high byte of timer 2
-	RCAP2H = 213;			// reload high byte of timer 2
+	count = 0;
+	complete_periods = 0;
+
 	disp_setup();			// Call display setup function
 
 	while (1)
 	{
-		uint16 copy = average;
-		disp_voltage(copy);
-		delay(65535);
+		if true		// DC mode
+		{
+			RCAP2L = 214;			// reload high byte of timer 2
+			RCAP2H = 213;			// reload high byte of timer 2
+			disp_voltage(average);		// passing the global variable straight to display, if the value is read wrong once in a blue moon it will only be wrong very griefly
+			delay(65535);
+		}
+		else			// Frequency Mode
+		{
+			RCAP2L = 214;			// reload high byte of timer 2
+			RCAP2H = 213;			// reload high byte of timer 2
+			
+			disp_freq(complete_periods)
+			delay(65535);
+		}
 	}
 	
 		
