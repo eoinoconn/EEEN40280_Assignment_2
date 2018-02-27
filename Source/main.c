@@ -29,14 +29,16 @@ static uint8 mode;
 static uint16 samp;
 static uint16 average;
 static uint16 message;
-static uint16 aboveorbelow;
-static uint16 count;
-static uint16 completed_periods;
+
 
 // timer interrupt
 void timer2 (void) interrupt 5 using 1
 {
 	TF2 = 0;
+	EXF2 = 0;
+	samp = RCAP2H;																// extract the most significant bits 
+	samp = ((samp << 8) + RCAP2L);								// store sample value
+	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 }
 
 // ADC interrupt
@@ -45,25 +47,7 @@ void ADC1 (void) interrupt 6 using 2
 	TF2 = 0;																			// Reset timer flag, not done by hardware
 	samp = ADCDATAH & 0xF;												// extract the most significant bits 
 	samp = ((samp << 8) + ADCDATAL);							// store sample value
-	if (P2 == 0)
-	{
-		average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
-	}
-	else if (P2 == 1)
-	{
-		// if a 0 crossover has not occured
-		if ((samp >= 2048) & (aboveorbelow != 0) | ((samp < 2048) & (aboveorbelow == 0)))
-		{
-			count++;
-		}
-		// a zero crossover has occured
-		else
-		{
-			completed_periods = (count >> 2) + ((completed_periods >> 2) * 3);	// calculate running average;
-			count = 0;
-			aboveorbelow = ~aboveorbelow;
-		}
-	}
+	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 }
 
 
@@ -135,32 +119,39 @@ void main (void)
 {
 	uint32 display_value;
 	P2 = 0xFF;
-	ADCCON1 = 0xB2;							// setup the ADC
-	ADCCON2 = 0x00;
-	IE = 192;						// enable only the ADC interrupt
-	T2CON = 0x4;				// setup timer 2
-	aboveorbelow = 0;		// setup global variables for frequency mesurement
-	count = 0;
-	completed_periods = 0;
-
+	ADCCON1 = 0xB2;		// setup the ADC
 	disp_setup();			// Call display setup function
 
 	while (1)
 	{
-		if ((P2 & 00000001) == 00000000)					// DC mode
+		////////////////////////////////////////////////////
+		// DC mode
+		////////////////////////////////////////////////////
+		if (P2 == 0)					
 		{
+			
+			IE = 192;							// enable only the ADC interrupt
+			RCAP2L = 214;					// reload high byte of timer 2
+			RCAP2H = 213;					// reload high byte of timer 2
+			T2CON = 0x4;					// setup timer 2
 			send_message(11,3);		// set 4 rightmost digits active
-			RCAP2L = 214;			// reload high byte of timer 2
-			RCAP2H = 213;			// reload high byte of timer 2
+
+
 			display_value = (average*625L) >> 10;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
 		}
-		else if ((P2 & 00000001) == 00000001)			// Frequency Mode
+		////////////////////////////////////////////////////
+		// Frequency Mode
+		////////////////////////////////////////////////////
+		else if (P2 == 1)			
 		{
+			IE = 160;							// enable only the ADC interrupt
+			RCAP2L = 0;						// reload high byte of timer 2
+			RCAP2H = 0;						// reload high byte of timer 2
+			T2CON = 0xF;					// setup timer 2
 			send_message(11,7);		// set 8 rightmost digits active
-			RCAP2L = 253;			// reload high byte of timer 2
-			RCAP2H = 232;			// reload high byte of timer 2
 			
-			display_value = 5530973L/completed_periods;	// calculate value to display			
+			
+			display_value = 5530973L/average;	// calculate value to display			
 		}
 		disp_value(display_value);
 		delay(13107);
