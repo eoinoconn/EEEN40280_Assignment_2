@@ -21,6 +21,7 @@
 
 typedef unsigned char uint8;				// 8-bit unsigned integer
 typedef unsigned short int uint16;	// 16-bit unsigned integer
+typedef unsigned long int uint32;		// 32-bit unsigned integer
 
 
 #define LOAD T0
@@ -99,7 +100,7 @@ void disp_setup()
 
 void disp_voltage(uint16 adc_val)
 {
-	uint16 mV = (adc_val >> 10) * 625;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
+	uint32 mV = (adc_val*625) >> 10;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
 	uint8 i, digit;
 	for (i = 1; i <= 4; i++)
 	{
@@ -125,7 +126,5 @@ void main (void)
 		uint16 copy = average;
 		disp_voltage(copy);
 		delay(65535);
-	}
-	
-		
+	}	
 }
