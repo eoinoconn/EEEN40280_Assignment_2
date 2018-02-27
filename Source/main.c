@@ -25,6 +25,7 @@ typedef unsigned short int uint16;	// 16-bit unsigned integer
 
 #define LOAD T0
 
+static uint8 mode;
 static uint16 samp;
 static uint16 average;
 static uint16 message;
@@ -44,20 +45,23 @@ void ADC1 (void) interrupt 6 using 2
 	TF2 = 0;																			// Reset timer flag, not done by hardware
 	samp = ADCDATAH & 0xF;												// extract the most significant bits 
 	samp = ((samp << 8) + ADCDATAL);							// store sample value
-	if true
+	if (mode == 0)
 	{
 		average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 	}
-	else
+	else if (mode == 1)
 	{
-		if (((samp > 2048) and (aboveorbelow)) or ((samp < 2048) and ((not aboveorbelow)))
+		// if a 0 crossover has not occured
+		if ((samp >= 2048) & (aboveorbelow == 1) | ((samp < 2048) & (aboveorbelow == 0)))
 		{
 			count++;
 		}
+		// a zero crossover has occured
 		else
 		{
-			complete_periods = count;
+			completed_periods = count;
 			count = 0;
+			aboveorbelow = ~aboveorbelow;
 		}
 	}
 }
@@ -128,7 +132,7 @@ void disp_voltage(uint16 adc_val)
 	}
 }
 
-void disp_voltage(uint16 adc_val)
+void disp_freq(uint16 adc_val)
 {
 	uint16 mV = (adc_val >> 10) * 625;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
 	uint8 i, digit;
@@ -143,30 +147,31 @@ void disp_voltage(uint16 adc_val)
 
 void main (void)
 {
-	ADCCON1 = 0xFE;		// setup the ADC
+	ADCCON1 = 0xFE;			// setup the ADC
 	ADCCON2 = 0x01;
-	IE = 192;					// enable only the ADC interrupt
-	T2CON = 0x4;			// setup timer 2
+	IE = 192;						// enable only the ADC interrupt
+	T2CON = 0x4;				// setup timer 2
+	aboveorbelow = 0;		// setup global variables for frequency mesurement
 	count = 0;
-	complete_periods = 0;
+	completed_periods = 0;
 
 	disp_setup();			// Call display setup function
 
 	while (1)
 	{
-		if true		// DC mode
+		if (mode == 0)					// DC mode
 		{
 			RCAP2L = 214;			// reload high byte of timer 2
 			RCAP2H = 213;			// reload high byte of timer 2
 			disp_voltage(average);		// passing the global variable straight to display, if the value is read wrong once in a blue moon it will only be wrong very griefly
 			delay(65535);
 		}
-		else			// Frequency Mode
+		else if (mode == 1)			// Frequency Mode
 		{
-			RCAP2L = 214;			// reload high byte of timer 2
-			RCAP2H = 213;			// reload high byte of timer 2
+			RCAP2L = 253;			// reload high byte of timer 2
+			RCAP2H = 232;			// reload high byte of timer 2
 			
-			disp_freq(complete_periods)
+			disp_freq(completed_periods);
 			delay(65535);
 		}
 	}
