@@ -119,31 +119,18 @@ void disp_setup()
 	send_message(15,0); 	// disable test mode	
 }
 
-void disp_voltage(uint16 adc_val)
+void disp_value(uint16 value)
 {
-	uint16 mV = (adc_val >> 10) * 625;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
 	uint8 i, digit;
 	for (i = 1; i <= 4; i++)
 	{
-		digit = mV % 10;									// get value of current digit
+		digit = value % 10;									// get value of current digit
 		if(i == 4) digit = digit | 0x80;	// include decimal pt for leftmost digit to convert to V
 		send_message(i,digit);						// update digit on display
-		mV /= 10;													// move to next digit
+		value /= 10;													// move to next digit
 	}
 }
 
-void disp_freq(uint16 adc_val)
-{
-	uint16 mV = (adc_val >> 10) * 625;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
-	uint8 i, digit;
-	for (i = 1; i <= 4; i++)
-	{
-		digit = mV % 10;									// get value of current digit
-		if(i == 4) digit = digit | 0x80;	// include decimal pt for leftmost digit to convert to V
-		send_message(i,digit);						// update digit on display
-		mV /= 10;													// move to next digit
-	}
-}
 
 void main (void)
 {
@@ -161,19 +148,23 @@ void main (void)
 	{
 		if (mode == 0)					// DC mode
 		{
+			uint16 display_value;
 			RCAP2L = 214;			// reload high byte of timer 2
 			RCAP2H = 213;			// reload high byte of timer 2
-			disp_voltage(average);		// passing the global variable straight to display, if the value is read wrong once in a blue moon it will only be wrong very griefly
-			delay(65535);
+			display_value = (average >> 10) * 625;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
+			disp_value(display_value);		// passing the global variable straight to display, if the value is read wrong once in a blue moon it will only be wrong very griefly
 		}
 		else if (mode == 1)			// Frequency Mode
 		{
+			long temp;
 			RCAP2L = 253;			// reload high byte of timer 2
 			RCAP2H = 232;			// reload high byte of timer 2
 			
-			disp_freq(completed_periods);
-			delay(65535);
+			temp = 5530973/completed_periods;
+			disp_value(temp);
+			
 		}
+		delay(13107);
 	}
 	
 		
