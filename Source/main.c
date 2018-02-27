@@ -46,21 +46,21 @@ void ADC1 (void) interrupt 6 using 2
 	TF2 = 0;																			// Reset timer flag, not done by hardware
 	samp = ADCDATAH & 0xF;												// extract the most significant bits 
 	samp = ((samp << 8) + ADCDATAL);							// store sample value
-	if (mode == 0)
+	if (P2 == 0)
 	{
 		average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 	}
-	else if (mode == 1)
+	else if (P2 == 1)
 	{
 		// if a 0 crossover has not occured
-		if ((samp >= 2048) & (aboveorbelow == 1) | ((samp < 2048) & (aboveorbelow == 0)))
+		if ((samp >= 2048) & (aboveorbelow != 0) | ((samp < 2048) & (aboveorbelow == 0)))
 		{
 			count++;
 		}
 		// a zero crossover has occured
 		else
 		{
-			completed_periods = count;
+			completed_periods = (count >> 2) + ((completed_periods >> 2) * 3);	// calculate running average;
 			count = 0;
 			aboveorbelow = ~aboveorbelow;
 		}
@@ -147,24 +147,21 @@ void main (void)
 
 	while (1)
 	{
-		if (mode == 0)					// DC mode
+		uint32 display_value;
+		if (P2 == 0)					// DC mode
 		{
-			uint16 display_value;
 			RCAP2L = 214;			// reload high byte of timer 2
 			RCAP2H = 213;			// reload high byte of timer 2
 			display_value = (average >> 10) * 625;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
-			disp_value(display_value);		// passing the global variable straight to display, if the value is read wrong once in a blue moon it will only be wrong very griefly
 		}
-		else if (mode == 1)			// Frequency Mode
+		else if (P2 == 1)			// Frequency Mode
 		{
-			long temp;
 			RCAP2L = 253;			// reload high byte of timer 2
 			RCAP2H = 232;			// reload high byte of timer 2
 			
-			temp = 5530973/completed_periods;
-			disp_value(temp);
-			
+			display_value = 5530973/completed_periods;	// calculate value to display			
 		}
+		disp_value(display_value);
 		delay(13107);
 	}
 	
