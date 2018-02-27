@@ -119,7 +119,7 @@ void main (void)
 {
 	uint32 display_value;
 	P2 = 0xFF;
-	ADCCON1 = 0xB2;		// setup the ADC
+	
 	disp_setup();			// Call display setup function
 
 	while (1)
@@ -129,7 +129,7 @@ void main (void)
 		////////////////////////////////////////////////////
 		if (P2 == 0)					
 		{
-			
+			ADCCON1 = 0xB2;			// setup the ADC
 			IE = 192;							// enable only the ADC interrupt
 			RCAP2L = 214;					// reload high byte of timer 2
 			RCAP2H = 213;					// reload high byte of timer 2
@@ -144,17 +144,16 @@ void main (void)
 		////////////////////////////////////////////////////
 		else if (P2 == 1)			
 		{
+			ADCCON1 = 0;		// setup the ADC
 			IE = 160;							// enable only the ADC interrupt
-			RCAP2L = 0;						// reload high byte of timer 2
-			RCAP2H = 0;						// reload high byte of timer 2
-			T2CON = 0xF;					// setup timer 2
+			T2CON = 0xD;					// setup timer 2
 			send_message(11,7);		// set 8 rightmost digits active
 			
 			
 			display_value = 5530973L/average;	// calculate value to display			
 		}
 		disp_value(display_value);
-		delay(13107);
+		delay(1310);
 	}
 	
 		
