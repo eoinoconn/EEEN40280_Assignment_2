@@ -21,6 +21,7 @@
 
 typedef unsigned char uint8;				// 8-bit unsigned integer
 typedef unsigned short int uint16;	// 16-bit unsigned integer
+typedef unsigned long int uint32;		// 32-bit unsigned integer
 
 
 #define LOAD T0
