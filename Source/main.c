@@ -29,9 +29,11 @@ static uint8 mode;
 static uint16 samp;
 static uint16 samp_max;
 static uint16 samp_min;
+static uint16 samp_prms;
 static uint16 average;
 static uint16 average_max;
 static uint16 average_min;
+static uint16 average_prms;
 static uint16 message;
 
 
@@ -53,10 +55,19 @@ void ADC1 (void) interrupt 6 using 2
 	samp = ((samp << 8) + ADCDATAL);							// store sample value
 	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 	
-	if (samp > 2048) samp_max = samp;	// schmitt trigger output is high, so value attributed to high peak 
-	else samp_min = samp;							// schmitt trigger output is low, so value attributed to low peak
+	if (samp > 2048) 
+	{
+		samp_max = samp;	// schmitt trigger output is high, so value attributed to high peak
+		samp_prms = samp;	// rectify signal
+	}
+	else 
+	{
+		samp_min = samp;					// schmitt trigger output is low, so value attributed to low peak
+		samp_prms = 2048 - samp;	// rectify signal
+	}
 	average_max = (samp_max >> 2) + ((average_max >> 2) * 3);	// calculate running average of high peak value
 	average_min = (samp_min >> 2) + ((average_min >> 2) * 3);	// calculate running average of low peak value
+	average_prms = (samp_prms >> 2) + ((average_prms >> 2) * 3);	// calculate running average pseudo RMS amplitude
 }
 
 
@@ -177,7 +188,7 @@ void main (void)
 			T2CON = 0x4;					// setup timer 2
 			send_message(11,3);		// set 4 rightmost digits active
 			
-			display_value = 2*(average_max - 2048); // display distance between peak and level shifted 'zero', scaled by 1/0.5
+			display_value = (2*(average_max - 2048)*625L) >> 10; // display distance between peak and level shifted 'zero', scaled by 1/0.5
 			dpoint = 1;
 		}
 		
@@ -192,7 +203,7 @@ void main (void)
 			T2CON = 0x4;					// setup timer 2
 			send_message(11,3);		// set 4 rightmost digits active
 			
-			display_value = 2*(average_max - average_min); // display distance between high peak and low peak, scaled by 1/0.5
+			display_value = (2*(average_max - average_min)*625L) >> 10; // display distance between high peak and low peak, scaled by 1/0.5
 			dpoint = 1;
 			
 		}
@@ -200,10 +211,17 @@ void main (void)
 		////////////////////////////////////////////////////
 		// Pseudo-RMS Amplitude mode
 		////////////////////////////////////////////////////
-		//else if (P2 == 0x04)
-		//{
-		//	
-		//}
+		else if (P2 == 0x04)
+		{
+			IE = 192;							// enable only the ADC interrupt
+			RCAP2L = 214;					// reload high byte of timer 2
+			RCAP2H = 213;					// reload high byte of timer 2
+			T2CON = 0x4;					// setup timer 2
+			send_message(11,3);		// set 4 rightmost digits active
+			
+			display_value = (2*(average_prms)*625L) >> 10; // display distance between high peak and low peak, scaled by 1/0.5
+			dpoint = 1;
+		}
 		
 		disp_value(display_value, dpoint);
 		delay(13107);
