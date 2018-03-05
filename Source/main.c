@@ -161,7 +161,7 @@ void main (void)
 			RCAP2H = 0;						// reload high byte of timer 2
 			T2CON = 0xF;					// setup timer 2
 			send_message(11,4);		// set 5 rightmost digits active
-					
+			
 			display_value = 5530973L/average;	// calculate value to display
 			dpoint = 0;
 		}
@@ -171,10 +171,10 @@ void main (void)
 		////////////////////////////////////////////////////
 		else if (P2 == 0x02)
 		{
-			IE = TODO;							// enable only the ADC interrupt
+			IE = 192;							// enable only the ADC interrupt
 			RCAP2L = 214;					// reload high byte of timer 2
 			RCAP2H = 213;					// reload high byte of timer 2
-			T2CON = TODO;					// setup timer 2
+			T2CON = 0x4;					// setup timer 2
 			send_message(11,3);		// set 4 rightmost digits active
 			
 			display_value = 2*(average_max - 2048); // display distance between peak and level shifted 'zero', scaled by 1/0.5
@@ -186,10 +186,10 @@ void main (void)
 		////////////////////////////////////////////////////
 		else if (P2 == 0x03)
 		{
-			IE = TODO;							// enable only the ADC interrupt
+			IE = 192;							// enable only the ADC interrupt
 			RCAP2L = 214;					// reload high byte of timer 2
 			RCAP2H = 213;					// reload high byte of timer 2
-			T2CON = TODO;					// setup timer 2
+			T2CON = 0x4;					// setup timer 2
 			send_message(11,3);		// set 4 rightmost digits active
 			
 			display_value = 2*(average_max - average_min); // display distance between high peak and low peak, scaled by 1/0.5
@@ -205,7 +205,7 @@ void main (void)
 		//	
 		//}
 		
-		disp_value(display_value);
+		disp_value(display_value, dpoint);
 		delay(13107);
 	}
 	
