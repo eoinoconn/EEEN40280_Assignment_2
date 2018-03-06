@@ -25,14 +25,39 @@ typedef unsigned long int uint32;
 
 #define LOAD T0
 
-static uint16 samp;
-static uint16 average;
+static uint8 overflows;
+static uint16 last_samp;
+static uint32 average;
 static uint16 message;
+
 
 // timer interrupt
 void timer2 (void) interrupt 5 using 1
 {
-	TF2 = 0;
+	if (EXF2)
+	{
+		uint32 current_samp, samp, overflow_counts;
+		uint16 capture;
+		
+		// get sample of counts occuring between periods
+		capture = RCAP2H;																		// extract the most significant bits 
+		capture = ((capture << 8) + RCAP2L);								// store sample value
+		
+		overflow_counts = ((uint32)overflows)<<16;
+		current_samp = capture-last_samp;
+		samp = current_samp + overflow_counts;			// find difference between last capture and current to get number of cycles completed
+		
+		average = (samp >> 2) + ((average >> 2) * 3);				// calculate running average
+		
+		last_samp = capture;																// save the current capture to calculate the sample on the next flag
+		overflows = 0;																			// reset the number of overflows
+	}
+	else
+	{
+		overflows++;																// if only the timer flag rasied an overflow has occured
+	}
+	TF2 = 0;																			// Reset timer flag, not done by hardware
+	EXF2 = 0;																			// Reset external event flag, not done by hardware
 }
 
 // ADC interrupt
@@ -101,24 +126,27 @@ void disp_setup()
 	LOAD = 1;
 	SPICON = 0x33;
 	send_message(12,1);		// turn on display
-	send_message(11,3);		// set 4 rightmost digits active
+	
 	send_message(10,4); 	// intensity equals number of active digits
 	send_message(9,0xFF);	// put all digits in decode mode
 	send_message(15,0); 	// disable test mode	
 }
 
-void disp_voltage(uint16 adc_val)
+
+void disp_value(uint32 value)
 {
 	uint32 mV = (adc_val*625L) >> 10;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
 	uint8 i, digit;
-	for (i = 1; i <= 4; i++)
+	for (i = 1; i <= 8; i++)
 	{
-		digit = mV % 10;									// get value of current digit
-		if(i == 4) digit = digit | 0x80;	// include decimal pt for leftmost digit to convert to V
-		send_message(i,digit);						// update digit on display
-		mV /= 10;													// move to next digit
+		digit = value % 10;										// get value of current digit
+		if(i == 4) digit = digit | 0x80;			// include decimal pt for leftmost digit to convert to V
+		send_message(i,digit);								// update digit on display
+		value /= 10;													// move to next digit
 	}
 }
+
+
 
 void main (void)
 {
