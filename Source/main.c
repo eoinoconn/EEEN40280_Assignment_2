@@ -145,6 +145,17 @@ void disp_value(uint32 value, uint8 dpoint)
 	}
 }
 
+void disp_error()
+{
+	send_message(8,13);		// send L
+	send_message(7,0);		// send 0
+	send_message(6,13);		// send L
+	send_message(5,10);		// send " "
+	send_message(4,12);		// send H
+	send_message(3,11);		// send E
+	send_message(2,13);		// send L
+	send_message(1,14);		// send P
+}
 
 
 void main (void)
@@ -158,7 +169,7 @@ void main (void)
 	// Main Loop
 	while (1)
 	{
-		mode = P2;
+		mode = (P2 & 0x07);
 		////////////////////////////////////////////////////
 		// DC mode
 		////////////////////////////////////////////////////
