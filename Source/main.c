@@ -24,6 +24,7 @@ typedef unsigned long int uint32;
 
 
 #define LOAD T0
+#define ZERO_SHIFT 2015
 
 static uint8 mode;
 static uint16 samp;
@@ -55,7 +56,7 @@ void ADC1 (void) interrupt 6 using 2
 	samp = ((samp << 8) + ADCDATAL);							// store sample value
 	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 	
-	if (samp > 2048) 
+	if (samp >= ZERO_SHIFT) 
 	{
 		samp_max = samp;	// schmitt trigger output is high, so value attributed to high peak
 		samp_prms = samp;	// rectify signal
@@ -63,7 +64,7 @@ void ADC1 (void) interrupt 6 using 2
 	else 
 	{
 		samp_min = samp;					// schmitt trigger output is low, so value attributed to low peak
-		samp_prms = 2048 - samp;	// rectify signal
+		samp_prms = ZERO_SHIFT - samp;	// rectify signal
 	}
 	average_max = (samp_max >> 2) + ((average_max >> 2) * 3);	// calculate running average of high peak value
 	average_min = (samp_min >> 2) + ((average_min >> 2) * 3);	// calculate running average of low peak value
@@ -188,7 +189,7 @@ void main (void)
 			T2CON = 0x4;					// setup timer 2
 			send_message(11,3);		// set 4 rightmost digits active
 			
-			display_value = (2*(average_max - 2048)*625L) >> 10; // display distance between peak and level shifted 'zero', scaled by 1/0.5
+			display_value = (2*(average_max - ZERO_SHIFT)*625L) >> 10; // display distance between peak and level shifted 'zero', scaled by 1/0.5
 			dpoint = 1;
 		}
 		
