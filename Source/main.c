@@ -28,8 +28,13 @@ typedef unsigned long int uint32;
 static uint8 overflows;
 static uint16 last_samp;
 static uint32 average;
+static uint16 min_average;
+static uint16 max_average;
 static uint16 message;
-
+static uint8 upper_flag;
+static uint16 min_samp;
+static uint16 max_samp;
+static uint8 mode;
 
 // timer interrupt
 void timer2 (void) interrupt 5 using 1
@@ -63,11 +68,48 @@ void timer2 (void) interrupt 5 using 1
 // ADC interrupt
 void ADC1 (void) interrupt 6 using 2
 {
-	TF2 = 0;																// Reset timer flag, not done by hardware
-	samp = ADCDATAH & 15;							// extract the most significant bits 
-	samp = ((samp << 8) + ADCDATAL);	// store sample value
-	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
+	uint16 samp;
+	TF2 = 0;																			// Reset timer flag, not done by hardware
+	// get sample of ADC
+	samp = ADCDATAH & 0xF;												// extract the most significant bits 
+	samp = ((samp << 8) + ADCDATAL);							// store sample value
+	
+	
+	if (mode == 0x00)
+	{
+		average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
+	}
+	else if (mode == 0x02 | mode == 0x03)
+	{
+		if (samp >= 2015)
+		{
+			if(upper_flag == 0)
+			{
+				min_average = (min_samp >> 2) + ((min_average >> 2) * 3);
+				min_samp = 2015;
+			}
+			if(samp > max_samp)
+			{
+				max_samp = samp;
+				upper_flag = 1;
+			}			
+		}
+		else if (samp < 2015)
+		{
+			if (upper_flag == 1)
+			{
+				max_average = (max_samp >> 2) + ((max_average >> 2) * 3);
+				max_samp = 2015;
+			}
+			if (samp < min_samp)
+			{
+				min_samp = samp;
+				upper_flag = 0;
+			}
+		}
+	}
 }
+
 
 void delay (uint16 delayVal)
 {
@@ -81,20 +123,6 @@ void delay (uint16 delayVal)
     }
 }	// end delay
 
-void long_delay (uint16 delayVal)
-{
-	uint16 i, j, k;                 // counting variable 
-	for (i = 0; i < delayVal; i++)    // repeat  
-    {
-		  for(j=0; j < 65500; j++)
-			{
-				for(k=0; k < 100; k++)
-					{
-						// nothin
-					}
-			}
-    }
-}	// end delay
 
 void send_message(uint8 addr, uint8 instr)
 {
@@ -126,16 +154,15 @@ void disp_setup()
 	LOAD = 1;
 	SPICON = 0x33;
 	send_message(12,1);		// turn on display
-	
-	send_message(10,4); 	// intensity equals number of active digits
 	send_message(9,0xFF);	// put all digits in decode mode
+	send_message(11,7);		// set 4 rightmost digits active
+	send_message(10,8); 	// intensity equals number of active digits
 	send_message(15,0); 	// disable test mode	
 }
 
 
 void disp_value(uint32 value)
 {
-	uint32 mV = (adc_val*625L) >> 10;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
 	uint8 i, digit;
 	for (i = 1; i <= 8; i++)
 	{
@@ -146,24 +173,119 @@ void disp_value(uint32 value)
 	}
 }
 
-
+void disp_error()
+{
+	send_message(4,12);		// send H
+	send_message(3,11);		// send E
+	send_message(2,13);		// send L
+	send_message(1,14);		// send P
+}
 
 void main (void)
 {
-	ADCCON1 = 0xB2;							// setup the ADC
-	ADCCON2 = 0x00;
-	IE = 192;										// enable only the ADC interrut
-	T2CON = 0x4;								// setup timer 2
-	RCAP2L = 214;								// reload high byte of timer 2
-	RCAP2H = 213;								// reload high byte of timer 2
-	disp_setup();								// Call display setup function
-
+	uint32 display_value;
+	P2 = 0xFF;
+	average = 0;
+	overflows = 0;
+	max_samp = 2015;
+	min_samp = 2015;
+	min_average = 0;
+	max_average = 0;
+	upper_flag = 0;
+	
+	
+	disp_setup();			// Call display setup function
 	
 	while (1)
 	{
-		uint16 copy = average;
-		disp_voltage(copy);
-		delay(1000);
+		mode = P2 & 0x07;
+		////////////////////////////////////////////////////
+		// DC mode
+		////////////////////////////////////////////////////
+		if (mode == 0x00)					
+		{
+			ADCCON1 = 0xB2;				// setup the ADC
+			ADCCON2 = 0x00;				// sample from ADC0
+			IE = 192;							// enable only the ADC interrupt
+			RCAP2L = 214;					// reload high byte of timer 2
+			RCAP2H = 213;					// reload high byte of timer 2
+			T2CON = 0x4;					// setup timer 2
+
+			display_value = (average*625L) >> 10;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
+			disp_value(display_value);
+		}
+		
+		////////////////////////////////////////////////////
+		// Frequency Mode
+		////////////////////////////////////////////////////
+		else if (mode == 0x01)			
+		{
+			ADCCON1 = 0;					// setup the ADC
+			IE = 160;							// enable only the ADC interrupt
+			T2CON = 0xD;					// setup timer 2
+			T2EX = 0;							// set the input as digital
+			
+			if ((average < 850) || (average > 1105920))
+			{
+				disp_error();
+			}
+			else
+			{
+				display_value = 11059200L/average;	// calculate value to display
+				disp_value(display_value);
+			}
+		}
+		
+		////////////////////////////////////////////////////
+		// Zero-to-Peak Mode
+		////////////////////////////////////////////////////
+		else if (mode == 0x02)			
+		{
+			ADCCON1 = 0xB2;
+			ADCCON2 = 0x02;				// sample from ADC2
+			IE = 192;							// enable only the ADC interrupt
+			RCAP2L = 234;					// reload high byte of timer 2
+			RCAP2H = 192;					// reload high byte of timer 2
+			T2CON = 0x04;					// setup timer 2
+			
+			
+			if (max_average < 2015)
+			{
+				disp_error();
+			}
+			else
+			{
+				display_value = max_average - 2015;
+				display_value = (display_value*625L) >> 9;
+				disp_value(display_value);
+			}
+		}		
+		
+		////////////////////////////////////////////////////
+		// Peak-to-Peak Mode
+		////////////////////////////////////////////////////
+		else if (mode == 0x03)			
+		{
+			ADCCON1 = 0xB2;
+			ADCCON2 = 0x02;				// sample from ADC2
+			IE = 192;							// enable only the ADC interrupt
+			RCAP2L = 234;					// reload high byte of timer 2
+			RCAP2H = 192;					// reload high byte of timer 2
+			T2CON = 0x04;					// setup timer 2
+			
+			if (max_average < min_average)
+			{
+				disp_error();
+			}
+			else
+			{
+				display_value = max_average - min_average;
+				display_value = (display_value*625L) >> 9;
+				disp_value(display_value);
+			}
+		}
+
+		delay(3310);
 	}
 	
 		
