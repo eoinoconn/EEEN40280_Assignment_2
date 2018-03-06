@@ -34,16 +34,18 @@ static uint16 message;
 // timer interrupt
 void timer2 (void) interrupt 5 using 1
 {
-	if (TF2 & EXF2)
+	if (EXF2)
 	{
-		uint32 samp;
+		uint32 current_samp, samp, overflow_counts;
 		uint16 capture;
 		
 		// get sample of counts occuring between periods
 		capture = RCAP2H;																		// extract the most significant bits 
 		capture = ((capture << 8) + RCAP2L);								// store sample value
 		
-		samp = capture-last_samp + (overflows*65535L);			// find difference between last capture and current to get number of cycles completed
+		overflow_counts = ((uint32)overflows)<<16;
+		current_samp = capture-last_samp;
+		samp = current_samp + overflow_counts;			// find difference between last capture and current to get number of cycles completed
 		
 		average = (samp >> 2) + ((average >> 2) * 3);				// calculate running average
 		
@@ -139,6 +141,7 @@ void main (void)
 	uint32 display_value;
 	P2 = 0xFF;
 	average = 0;
+	overflows = 0;
 	
 	disp_setup();			// Call display setup function
 
@@ -147,7 +150,7 @@ void main (void)
 		////////////////////////////////////////////////////
 		// DC mode
 		////////////////////////////////////////////////////
-		if (P2 == 0)					
+		if (0)					
 		{
 			ADCCON1 = 0xB2;				// setup the ADC
 			IE = 192;							// enable only the ADC interrupt
@@ -158,30 +161,32 @@ void main (void)
 
 
 			display_value = (average*625L) >> 10;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
+			disp_value(display_value);
 		}
 		////////////////////////////////////////////////////
 		// Frequency Mode
 		////////////////////////////////////////////////////
-		else if (P2 == 1)			
+		else if (1)			
 		{
 			ADCCON1 = 0;					// setup the ADC
 			IE = 160;							// enable only the ADC interrupt
 			T2CON = 0xD;					// setup timer 2
+			T2EX = 0;							// set the input as digital
 			send_message(11,7);		// set 8 rightmost digits active
 			
-			if ((average < 110) | (average > 1110000))
+			if ((average < 850) | (average > 1105920))
 			{
 				// out of range error
 			}
 			else
 			{
-			display_value = 5530973L/average;	// calculate value to display
+			display_value = 11059200L/average;	// calculate value to display
 			disp_value(display_value);
 
 			}
 		}
 
-		delay(1310);
+		delay(13100);
 	}
 	
 		
