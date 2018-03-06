@@ -169,17 +169,18 @@ void main (void)
 			T2CON = 0xD;					// setup timer 2
 			send_message(11,7);		// set 8 rightmost digits active
 			
-			if ((average < 110) | (average > 11100000))
+			if ((average < 110) | (average > 1110000))
 			{
 				// out of range error
 			}
 			else
 			{
 			display_value = 5530973L/average;	// calculate value to display
+			disp_value(display_value);
+
 			}
 		}
 
-		disp_value(display_value);
 		delay(1310);
 	}
 	
