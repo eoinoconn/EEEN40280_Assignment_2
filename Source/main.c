@@ -51,24 +51,35 @@ void timer2 (void) interrupt 5 using 1
 // ADC interrupt
 void ADC1 (void) interrupt 6 using 2
 {
-	TF2 = 0;																			// Reset timer flag, not done by hardware
 	samp = ADCDATAH & 0xF;												// extract the most significant bits 
 	samp = ((samp << 8) + ADCDATAL);							// store sample value
-	average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
 	
-	if (samp >= ZERO_SHIFT) 
+	if (mode == 0x00)
+	{
+		average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
+	}
+	else if ((mode == 0x02 | mode == 0x03) & samp >= ZERO_SHIFT) 
 	{
 		samp_max = samp;	// schmitt trigger output is high, so value attributed to high peak
-		samp_prms = samp;	// rectify signal
+		average_max = (samp_max >> 2) + ((average_max >> 2) * 3);	// calculate running average of high peak value
 	}
-	else 
+	else if (mode == 0x03)
 	{
 		samp_min = samp;					// schmitt trigger output is low, so value attributed to low peak
-		samp_prms = ZERO_SHIFT - samp;	// rectify signal
+		average_min = (samp_min >> 2) + ((average_min >> 2) * 3);	// calculate running average of low peak value
+		average_max = (samp_max >> 2) + ((average_max >> 2) * 3);	// calculate running average of high peak value
 	}
-	average_max = (samp_max >> 2) + ((average_max >> 2) * 3);	// calculate running average of high peak value
-	average_min = (samp_min >> 2) + ((average_min >> 2) * 3);	// calculate running average of low peak value
-	average_prms = (samp_prms >> 2) + ((average_prms >> 2) * 3);	// calculate running average pseudo RMS amplitude
+	else if (mode == 0x04 & samp >= ZERO_SHIFT) 
+	{
+		samp_prms = samp;	// rectify signal
+		average_prms = (samp_prms >> 2) + ((average_prms >> 2) * 3);	// calculate running average pseudo RMS amplitude
+	}
+	else if (mode == 0x04)
+	{
+		samp_prms = ZERO_SHIFT - samp;	// rectify signal
+		average_prms = (samp_prms >> 2) + ((average_prms >> 2) * 3);	// calculate running average pseudo RMS amplitude
+	}
+	TF2 = 0;																			// Reset timer flag, not done by hardware
 }
 
 
@@ -147,12 +158,13 @@ void main (void)
 	// Main Loop
 	while (1)
 	{
+		mode = P2;
 		////////////////////////////////////////////////////
 		// DC mode
 		////////////////////////////////////////////////////
-		if (P2 == 0x00)					
+		if (mode == 0x00)					
 		{
-			
+
 			IE = 192;							// enable only the ADC interrupt
 			RCAP2L = 214;					// reload high byte of timer 2
 			RCAP2H = 213;					// reload high byte of timer 2
@@ -166,7 +178,7 @@ void main (void)
 		////////////////////////////////////////////////////
 		// Frequency Mode
 		////////////////////////////////////////////////////
-		else if (P2 == 0x01)			
+		else if (mode == 0x01)			
 		{
 			IE = 160;							// enable only the ADC interrupt
 			RCAP2L = 0;						// reload high byte of timer 2
@@ -181,7 +193,7 @@ void main (void)
 		////////////////////////////////////////////////////
 		// Zero-to-Peak Amplitude mode
 		////////////////////////////////////////////////////
-		else if (P2 == 0x02)
+		else if (mode == 0x02)
 		{
 			IE = 192;							// enable only the ADC interrupt
 			RCAP2L = 214;					// reload high byte of timer 2
@@ -196,7 +208,7 @@ void main (void)
 		////////////////////////////////////////////////////
 		// Peak-to-Peak Amplitude mode
 		////////////////////////////////////////////////////
-		else if (P2 == 0x03)
+		else if (mode == 0x03)
 		{
 			IE = 192;							// enable only the ADC interrupt
 			RCAP2L = 214;					// reload high byte of timer 2
@@ -212,7 +224,7 @@ void main (void)
 		////////////////////////////////////////////////////
 		// Pseudo-RMS Amplitude mode
 		////////////////////////////////////////////////////
-		else if (P2 == 0x04)
+		else if (mode == 0x04)
 		{
 			IE = 192;							// enable only the ADC interrupt
 			RCAP2L = 214;					// reload high byte of timer 2
