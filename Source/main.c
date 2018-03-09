@@ -41,18 +41,20 @@ void timer2 (void) interrupt 5 using 1
 {
 	if (EXF2)
 	{
-		uint32 current_samp, samp, overflow_counts;
+		uint32 samp;
 		uint16 capture;
 		
 		// get sample of counts occuring between periods
 		capture = RCAP2H;																		// extract the most significant bits 
 		capture = ((capture << 8) + RCAP2L);								// store sample value
 		
-		overflow_counts = ((uint32)overflows)<<16;					// find the number of counts as a result of the overflow
-		current_samp = capture-last_samp;										// find the number of counts between this samp and the last
-		samp = current_samp + overflow_counts;							// The number of counts is the result fo these two alues
+	// find the number of counts as a result of the overflow
+		// find the number of counts between this samp and the last
+		// The number of counts is the result fo these two alues
 		
-		average = (samp >> 3) + ((average >> 3) * 7);				// calculate the running average of these values
+		samp = ((uint32)(capture - last_samp) + ((uint32)(overflows << 16)));
+		
+		average = (samp >> 3) + ((uint32)(average >> 3) * 7);				// calculate the running average of these values
 		
 		last_samp = capture;																// save the current capture to calculate the sample on the next flag
 		overflows = 0;																			// reset the number of overflows
@@ -85,7 +87,7 @@ void ADC1 (void) interrupt 6 using 2
 		{
 			if(upper_flag == 0)
 			{
-				min_average = (min_samp >> 3) + ((min_average >> 3) * 7);
+				min_average = (min_samp >> 4) + ((min_average >> 4) * 15);
 				min_samp = 2015;
 			}
 			if(samp > max_samp)
@@ -98,7 +100,7 @@ void ADC1 (void) interrupt 6 using 2
 		{
 			if (upper_flag == 1)
 			{
-				max_average = (max_samp >> 3) + ((max_average >> 3) * 7);
+				max_average = (max_samp >> 4) + ((max_average >> 4) * 15);
 				max_samp = 2015;
 			}
 			if (samp < min_samp)
@@ -157,8 +159,8 @@ void disp_setup()
 	SPICON = 0x33;
 	send_message(12,1);		// turn on display
 	send_message(9,0xFF);	// put all digits in decode mode
-	send_message(11,7);		// set 4 rightmost digits active
-	send_message(10,8); 	// intensity equals number of active digits
+	send_message(11,4);		// set 4 rightmost digits active
+	send_message(10,5); 	// intensity equals number of active digits
 	send_message(15,0); 	// disable test mode	
 }
 
@@ -177,6 +179,7 @@ void disp_value(uint32 value)
 
 void disp_error()
 {
+	send_message(5,15);		// send " "
 	send_message(4,12);		// send H
 	send_message(3,11);		// send E
 	send_message(2,13);		// send L
@@ -186,6 +189,9 @@ void disp_error()
 void main (void)
 {
 	uint32 display_value;
+	uint16 copy_min;
+	uint16 copy_max;
+	
 	P2 = 0xFF;
 	average = 0;
 	overflows = 0;
@@ -227,14 +233,14 @@ void main (void)
 			T2CON = 0xD;					// setup timer 2
 			T2EX = 0;							// set the input as digital
 			
-			if ((average < 850) || (average > 1105920))
+			if ((average < 850) || (average > 55296))
 			{
 				disp_error();
 			}
 			else
 			{
-				display_value = 11059200L/average;	// calculate value to display
-				disp_value(display_value);
+				// calculate value to display
+				disp_value((uint32)11059200/average);
 			}
 		}
 		
@@ -250,15 +256,16 @@ void main (void)
 			RCAP2H = 192;					// reload high byte of timer 2
 			T2CON = 0x04;					// setup timer 2
 			
+			copy_max = max_average;
 			
-			if (max_average < 2015)
+			if (copy_max < 2015)
 			{
 				disp_error();
 			}
 			else
 			{
-				display_value = max_average - 2015;
-				display_value = (display_value*625L) >> 9;
+				display_value = copy_max - 2015;
+				display_value = ((uint32)display_value*625) >> 9;
 				disp_value(display_value);
 			}
 		}		
@@ -275,13 +282,16 @@ void main (void)
 			RCAP2H = 192;					// reload high byte of timer 2
 			T2CON = 0x04;					// setup timer 2
 			
-			if (max_average < min_average)
+			copy_max = max_average;
+			copy_min = min_average;
+			
+			if (copy_max < copy_min)
 			{
 				disp_error();
 			}
 			else
 			{
-				display_value = max_average - min_average;
+				display_value = copy_max - copy_min;
 				display_value = (display_value*625L) >> 9;
 				disp_value(display_value);
 			}
