@@ -87,7 +87,7 @@ void ADC1 (void) interrupt 6 using 2
 		{
 			if(upper_flag == 0)
 			{
-				min_average = (min_samp >> 4) + ((min_average >> 4) * 15);
+				min_average = (min_samp >> 3) + ((min_average >> 3) * 7);
 				min_samp = 2015;
 			}
 			if(samp > max_samp)
@@ -100,7 +100,7 @@ void ADC1 (void) interrupt 6 using 2
 		{
 			if (upper_flag == 1)
 			{
-				max_average = (max_samp >> 4) + ((max_average >> 4) * 15);
+				max_average = (max_samp >> 3) + ((max_average >> 3) * 7);
 				max_samp = 2015;
 			}
 			if (samp < min_samp)
@@ -297,7 +297,7 @@ void main (void)
 			}
 		}
 
-		delay(3310);
+		delay(131000);
 	}
 	
 		
