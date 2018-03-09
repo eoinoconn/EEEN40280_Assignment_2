@@ -48,36 +48,36 @@ void timer2 (void) interrupt 5 using 1
 		capture = RCAP2H;																		// extract the most significant bits 
 		capture = ((capture << 8) + RCAP2L);								// store sample value
 		
-		overflow_counts = ((uint32)overflows)<<16;
-		current_samp = capture-last_samp;
-		samp = current_samp + overflow_counts;			// find difference between last capture and current to get number of cycles completed
+		overflow_counts = ((uint32)overflows)<<16;					// find the number of counts as a result of the overflow
+		current_samp = capture-last_samp;										// find the number of counts between this samp and the last
+		samp = current_samp + overflow_counts;							// The number of counts is the result fo these two alues
 		
-		average = (samp >> 2) + ((average >> 2) * 3);				// calculate running average
+		average = (samp >> 3) + ((average >> 3) * 7);				// calculate the running average of these values
 		
 		last_samp = capture;																// save the current capture to calculate the sample on the next flag
 		overflows = 0;																			// reset the number of overflows
 	}
 	else
 	{
-		overflows++;																// if only the timer flag rasied an overflow has occured
+		overflows++;																				// if only the timer flag is rasied then an overflow has occured
 	}
-	TF2 = 0;																			// Reset timer flag, not done by hardware
-	EXF2 = 0;																			// Reset external event flag, not done by hardware
+	TF2 = 0;																							// Reset timer flag, not done by hardware
+	EXF2 = 0;																							// Reset external event flag, not done by hardware
 }
 
 // ADC interrupt
 void ADC1 (void) interrupt 6 using 2
 {
 	uint16 samp;
-	TF2 = 0;																			// Reset timer flag, not done by hardware
+	
 	// get sample of ADC
-	samp = ADCDATAH & 0xF;												// extract the most significant bits 
-	samp = ((samp << 8) + ADCDATAL);							// store sample value
+	samp = ADCDATAH & 0xF;													// extract the most significant bits 
+	samp = ((samp << 8) + ADCDATAL);								// store sample value
 	
 	
 	if (mode == 0x00)
 	{
-		average = (samp >> 2) + ((average >> 2) * 3);	// calculate running average
+		average = (samp >> 3) + ((average >> 3) * 7);	// calculate running average
 	}
 	else if (mode == 0x02 | mode == 0x03)
 	{
@@ -85,7 +85,7 @@ void ADC1 (void) interrupt 6 using 2
 		{
 			if(upper_flag == 0)
 			{
-				min_average = (min_samp >> 2) + ((min_average >> 2) * 3);
+				min_average = (min_samp >> 3) + ((min_average >> 3) * 7);
 				min_samp = 2015;
 			}
 			if(samp > max_samp)
@@ -98,7 +98,7 @@ void ADC1 (void) interrupt 6 using 2
 		{
 			if (upper_flag == 1)
 			{
-				max_average = (max_samp >> 2) + ((max_average >> 2) * 3);
+				max_average = (max_samp >> 3) + ((max_average >> 3) * 7);
 				max_samp = 2015;
 			}
 			if (samp < min_samp)
@@ -108,6 +108,8 @@ void ADC1 (void) interrupt 6 using 2
 			}
 		}
 	}
+	
+	TF2 = 0;																			// Reset timer flag, not done by hardware
 }
 
 
