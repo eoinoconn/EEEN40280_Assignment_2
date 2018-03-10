@@ -176,13 +176,13 @@ void disp_setup()
 	Setup the 8 digit display before use
 	*/
 	
-	LOAD = 1;							// initialise value
-	SPICON = 0x33;				// 
-	send_message(12,1);		// turn on display
-	send_message(9,0xFF);	// put all digits in decode mode
-	send_message(11,4);		// set 5 rightmost digits active
-	send_message(10,5); 	// intensity equals number of active digits
-	send_message(15,0); 	// disable test mode	
+	LOAD = 1;								// initialise value
+	SPICON = 0x33;					// 
+	send_message(12,1);			// turn on display
+	send_message(9,0xFF);		// put all digits in decode mode
+	send_message(11,4);			// set 5 rightmost digits active
+	send_message(10,5); 		// intensity equals number of active digits
+	send_message(15,0); 		// disable test mode	
 } // end disp_setup
 
 
@@ -197,10 +197,10 @@ void disp_value(uint32 value)
 	uint8 i, digit;
 	for (i = 1; i <= 8; i++)
 	{
-		digit = value % 10;										// get value of i-th digit from left
-		if(i == 4) digit = digit | 0x80;			// include decimal pt for fourth digit from left to convert to V/kHz
-		send_message(i,digit);								// write digit to display
-		value /= 10;													// move to next digit
+		digit = value % 10;								// get value of i-th digit from left
+		if(i == 4) digit = digit | 0x80;	// include decimal pt for fourth digit from left to convert to V/kHz
+		send_message(i,digit);						// write digit to display
+		value /= 10;											// move to next digit
 	}
 } // end disp_value
 
@@ -235,7 +235,7 @@ void main (void)
 	upper_flag = 0;		// initialise value
 	
 	
-	disp_setup();			// Call display setup function
+	disp_setup();		// Call display setup function
 	
 	while (1)
 	{
@@ -248,12 +248,12 @@ void main (void)
 		////////////////////////////////////////////////////
 		if (mode == 0x00)					
 		{
-			ADCCON1 = 0xB2;				// setup the ADC
-			ADCCON2 = 0x00;				// sample from ADC0
-			IE = 192;							// enable only the ADC interrupt
-			RCAP2L = 214;					// reload high byte of timer 2
-			RCAP2H = 213;					// reload high byte of timer 2
-			T2CON = 0x4;					// setup timer 2
+			ADCCON1 = 0xB2;		// setup the ADC
+			ADCCON2 = 0x00;		// sample from ADC0
+			IE = 192;					// enable only the ADC interrupt
+			RCAP2L = 214;			// reload high byte of timer 2
+			RCAP2H = 213;			// reload high byte of timer 2
+			T2CON = 0x4;			// setup timer 2
 
 			display_value = (average*625L) >> 10;	// scale adc_val by 625/1024 ~= 0.61 to get voltage in mV
 			disp_value(display_value);
@@ -264,10 +264,10 @@ void main (void)
 		////////////////////////////////////////////////////
 		else if (mode == 0x01)			
 		{
-			ADCCON1 = 0;					// setup the ADC
-			IE = 160;							// enable only the ADC interrupt
-			T2CON = 0xD;					// setup timer 2
-			T2EX = 0;							// set the input as digital
+			ADCCON1 = 0;	// setup the ADC
+			IE = 160;			// enable only the ADC interrupt
+			T2CON = 0xD;	// setup timer 2
+			T2EX = 0;			// set the input as digital
 			
 			if ((average < 850) || (average > 55296))
 			{
@@ -286,11 +286,11 @@ void main (void)
 		else if (mode == 0x02)			
 		{
 			ADCCON1 = 0xB2;
-			ADCCON2 = 0x02;				// sample from ADC2
-			IE = 192;							// enable only the ADC interrupt
-			RCAP2L = 234;					// reload high byte of timer 2
-			RCAP2H = 192;					// reload high byte of timer 2
-			T2CON = 0x04;					// setup timer 2
+			ADCCON2 = 0x02;		// sample from ADC2
+			IE = 192;					// enable only the ADC interrupt
+			RCAP2L = 234;			// reload high byte of timer 2
+			RCAP2H = 192;			// reload high byte of timer 2
+			T2CON = 0x04;			// setup timer 2
 			
 			copy_max = max_average;
 			
@@ -312,11 +312,11 @@ void main (void)
 		else if (mode == 0x03)			
 		{
 			ADCCON1 = 0xB2;
-			ADCCON2 = 0x02;				// sample from ADC2
-			IE = 192;							// enable only the ADC interrupt
-			RCAP2L = 234;					// reload high byte of timer 2
-			RCAP2H = 192;					// reload high byte of timer 2
-			T2CON = 0x04;					// setup timer 2
+			ADCCON2 = 0x02;		// sample from ADC2
+			IE = 192;					// enable only the ADC interrupt
+			RCAP2L = 234;			// reload high byte of timer 2
+			RCAP2H = 192;			// reload high byte of timer 2
+			T2CON = 0x04;			// setup timer 2
 			
 			copy_max = max_average;
 			copy_min = min_average;
