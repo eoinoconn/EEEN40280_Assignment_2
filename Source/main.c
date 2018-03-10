@@ -269,14 +269,13 @@ void main (void)
 			T2CON = 0xD;					// setup timer 2
 			T2EX = 0;							// set the input as digital
 			
-			if ((average < 850) || (average > 55296))
+			if ((average < 850) || (average > 55296))						// If the average value is out of range
 			{
-				disp_error();
+				disp_error();																			// Error message will be displayed
 			}
 			else
 			{
-				// calculate value to display
-				disp_value((uint32)11059200/average);
+				disp_value((uint32)11059200/average);							// otherwise, calculate value to display
 			}
 		}
 		
