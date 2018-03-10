@@ -1,6 +1,6 @@
 /*Digital and Embedded Systems Assignment 2 - Signal Measurements
 	Conor Martin - 13334846
-	Eoin O'Connell - 
+	Eoin O'Connell - 13335561
 	
 	Insert description of program here
 */
@@ -44,9 +44,9 @@ void timer2 (void) interrupt 5 using 1
 		// find the number of counts between this samp and the last
 		// The number of counts is the result fo these two alues
 		
-		samp = ((uint32)(capture - last_samp) + ((uint32)(overflows << 16)));
+		samp = (capture - last_samp) + ((uint32)overflows << 16);
 		
-		average = (samp >> 3) + ((uint32)(average >> 3) * 7);				// calculate the running average of these values
+		average = (samp >> 3) + (((uint32)average >> 3) * 7));				// calculate the running average of these values
 		
 		last_samp = capture;																// save the current capture to calculate the sample on the next flag
 		overflows = 0;																			// reset the number of overflows
