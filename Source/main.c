@@ -46,7 +46,7 @@ void timer2 (void) interrupt 5 using 1
 		
 		samp = (capture - last_samp) + ((uint32)overflows << 16);
 		
-		average = (samp >> 3) + (((uint32)average >> 3) * 7));				// calculate the running average of these values
+		average = (samp >> 3) + (((uint32)average >> 3) * 7);				// calculate the running average of these values
 		
 		last_samp = capture;																// save the current capture to calculate the sample on the next flag
 		overflows = 0;																			// reset the number of overflows
@@ -269,7 +269,7 @@ void main (void)
 			T2CON = 0xD;	// setup timer 2
 			T2EX = 0;			// set the input as digital
 			
-			if ((average < 850) || (average > 55296))						// If the average value is out of range
+			if ((average < 850) || (average > 1105920))						// If the average value is out of range
 			{
 				disp_error();																			// Error message will be displayed
 			}
