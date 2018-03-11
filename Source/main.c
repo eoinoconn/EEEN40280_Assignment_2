@@ -36,20 +36,16 @@ void timer2 (void) interrupt 5 using 1
 		uint32 samp;
 		uint16 capture;
 		
-		// get sample of counts occuring between periods
-		capture = RCAP2H;																		// extract the most significant bits 
-		capture = ((capture << 8) + RCAP2L);								// store sample value
+		// get sample of counts occuring between negative edges on T2EX
+		capture = RCAP2H;																						// extract the most significant bits 
+		capture = ((capture << 8) + RCAP2L);												// store sample value
 		
-		// find the number of counts as a result of the overflow
-		// find the number of counts between this samp and the last
-		// The number of counts is the result fo these two alues
+		samp = (capture - last_samp) + ((uint32)overflows << 16);		// difference in samples between this samp and last samp plus counts due to overflow
 		
-		samp = (capture - last_samp) + ((uint32)overflows << 16);
+		average = (samp >> 3) + (((uint32)average >> 3) * 7);				// calculate the running average
 		
-		average = (samp >> 3) + (((uint32)average >> 3) * 7);				// calculate the running average of these values
-		
-		last_samp = capture;																// save the current capture to calculate the sample on the next flag
-		overflows = 0;																			// reset the number of overflows
+		last_samp = capture;																				// save the current capture to calculate the sample on the next flag
+		overflows = 0;																							// reset the number of overflows
 	}
 	else
 	{
